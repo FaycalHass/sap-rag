@@ -1,3 +1,6 @@
+# Claude Code
+.claude/
+
 # Variables d'environnement — NE JAMAIS COMMITTER
 .env
 *.env
