@@ -7,7 +7,8 @@ from typing import Dict
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 
 from .config import settings
 from .models import (
@@ -177,3 +178,10 @@ async def delete_document(doc_id: str):
 async def get_stats():
     stats = ingestion.get_stats()
     return StatsResponse(**stats)
+
+
+# Serve frontend static files (built React app) at the root.
+# Must be registered AFTER all /api routes so they take precedence.
+_STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+if _STATIC_DIR.is_dir():
+    app.mount("/", StaticFiles(directory=str(_STATIC_DIR), html=True), name="static")
