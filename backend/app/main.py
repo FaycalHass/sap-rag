@@ -40,10 +40,22 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Simple in-memory rate limiter: 10 requests/minute per IP
+# Simple in-memory rate limiter: 30 requests/minute per real client IP
 _rate_store: Dict[str, list] = defaultdict(list)
-RATE_LIMIT = 10
+RATE_LIMIT = 30
 RATE_WINDOW = 60
+
+
+def _get_client_ip(request: Request) -> str:
+    # On HF Spaces / behind a reverse proxy, request.client.host is the proxy IP.
+    # The real client IP is in X-Forwarded-For (first entry).
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    return request.client.host if request.client else "unknown"
 
 
 def _check_rate_limit(ip: str) -> bool:
@@ -80,12 +92,12 @@ async def health_check():
 
 @app.post("/api/chat")
 async def chat(request: Request, chat_request: ChatRequest):
-    client_ip = request.client.host if request.client else "unknown"
+    client_ip = _get_client_ip(request)
 
     if not _check_rate_limit(client_ip):
         raise HTTPException(
             status_code=429,
-            detail="Trop de requêtes. Limite : 10 questions par minute.",
+            detail="Trop de requêtes. Limite : 30 questions par minute.",
         )
 
     question = chat_request.question.strip()
