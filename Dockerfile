@@ -28,14 +28,19 @@ RUN python -c "from chromadb.utils.embedding_functions import DefaultEmbeddingFu
 # Code backend
 COPY backend/app ./app
 
+# Documents pré-chargés (versionnés dans git, bundlés dans l'image → persistants)
+# Ces docs sont auto-ingérés au démarrage via scan_documents_folder().
+COPY backend/documents ./documents
+
 # Build frontend depuis le stage 1
 COPY --from=frontend-builder /frontend/dist ./static
 
-# Stockage éphémère (réinitialisé à chaque restart sur HF Spaces gratuit)
-RUN mkdir -p /tmp/documents /tmp/chroma_data && chmod 777 /tmp/documents /tmp/chroma_data
+# Stockage runtime éphémère pour ChromaDB (réinitialisé à chaque restart sur HF Spaces).
+# Les docs bundlés dans /app/documents sont ré-ingérés au démarrage pour reconstruire l'index.
+RUN mkdir -p /tmp/chroma_data && chmod 777 /tmp/chroma_data
 
 ENV CHROMA_PERSIST_DIR=/tmp/chroma_data
-ENV DOCUMENTS_DIR=/tmp/documents
+ENV DOCUMENTS_DIR=/app/documents
 ENV HF_HOME=/tmp/hf_cache
 
 EXPOSE 7860

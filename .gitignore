@@ -6,9 +6,11 @@
 *.env
 .env.local
 
-# Données persistantes
+# Données persistantes runtime (index vectoriel — reconstruit au démarrage)
 backend/chroma_data/
-backend/documents/
+
+# NB: backend/documents/ EST versionné — les docs sont bundlées dans l'image
+# Docker et auto-ingérées au démarrage pour reconstruire l'index ChromaDB.
 
 # Python
 __pycache__/
