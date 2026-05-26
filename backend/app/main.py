@@ -18,7 +18,7 @@ from .models import (
     StatsResponse,
     UploadResponse,
 )
-from . import generation, ingestion, retrieval
+from . import embeddings, generation, ingestion, retrieval, vector_store
 
 logging.basicConfig(
     level=logging.INFO,
@@ -73,6 +73,16 @@ async def startup_event() -> None:
     logger.info("Starting SAP RAG API...")
     Path(settings.DOCUMENTS_DIR).mkdir(parents=True, exist_ok=True)
     Path(settings.CHROMA_PERSIST_DIR).mkdir(parents=True, exist_ok=True)
+
+    # Warm up the embedding model and ChromaDB so the FIRST user query is fast.
+    # Without this, the first /api/chat blocks 30-120s while ONNX loads, and the
+    # SSE stream never emits — the UI looks frozen until the user retries.
+    try:
+        embeddings.embed_query("warmup")
+        vector_store.get_collection()
+        logger.info("Embedding model and vector store warmed up")
+    except Exception as e:
+        logger.warning(f"Warm-up failed (first query will be slow): {e}")
 
     # Scan documents folder for pre-existing files
     try:
